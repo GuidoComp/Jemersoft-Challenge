@@ -10,7 +10,7 @@ import java.util.ArrayList;
 @NoArgsConstructor
 
 public class Pokemon {
-    private int id;
+    //private int id;
     private String photo;
     private ArrayList<String> types;
     private int weight;

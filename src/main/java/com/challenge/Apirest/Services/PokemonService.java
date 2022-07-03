@@ -10,9 +10,6 @@ import java.util.ArrayList;
 @Service
 public class PokemonService {
 
-    @Autowired
-    PokemonRepository pokemonRepository;
-
     /*protected ArrayList<Pokemon> getPokemon() {
         pokemonRepository.findAll()
     }
