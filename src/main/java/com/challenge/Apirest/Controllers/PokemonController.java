@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.LinkedList;
 
 @RestController
 @RequestMapping("pokemons")
@@ -22,8 +22,8 @@ public class PokemonController {
         this.pokemonService = pokemonService;
     }
     @GetMapping
-    private ArrayList<Pokemon> generatePokemons() throws IOException {
-        ArrayList<Pokemon> list = pokemonService.generatePokemons();
+    private LinkedList<Pokemon> pokemonsList() throws IOException {
+        LinkedList<Pokemon> list = pokemonService.generatePokemons();
         pokemonRepository = new PokemonRepository(list);
         return list;
     }

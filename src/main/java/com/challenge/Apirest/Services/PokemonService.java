@@ -2,6 +2,7 @@ package com.challenge.Apirest.Services;
 
 import com.challenge.Apirest.Models.Ability;
 import com.challenge.Apirest.Models.Pokemon;
+import com.challenge.Apirest.Repositories.PokemonRepository;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Scanner;
 
 @Service
@@ -27,9 +29,9 @@ public class PokemonService {
     private static final String ABILITIES_KEY = "abilities";
     private static final String ABILITY_KEY = "ability";
 
-    public ArrayList<Pokemon> generatePokemons() throws IOException {
-        ArrayList<Pokemon> lista = new ArrayList<>();
-        ArrayList<String> pokemonsUrlsList = this.jsonArrayToArrayList(this.convertURLToJsonArray(URLPOKE_API, POKEMONS_JSONARRAY_KEY), POKEMON_JSONOBJECT_KEY);
+    public LinkedList<Pokemon> generatePokemons() throws IOException {
+        LinkedList<Pokemon> lista = new LinkedList<>();
+        LinkedList<String> pokemonsUrlsList = this.jsonArrayToArrayList(this.convertURLToJsonArray(URLPOKE_API, POKEMONS_JSONARRAY_KEY), POKEMON_JSONOBJECT_KEY);
 
         for (String pokemonUrl: pokemonsUrlsList) {
             JSONObject pokeJsonObject = this.convertURLToJsonObject(pokemonUrl);
@@ -55,8 +57,8 @@ public class PokemonService {
         return pokeJsonObject.get("name").toString();
     }
 
-    private ArrayList<String> searchMoves(JSONObject pokeJsonObject) {
-        ArrayList<String> moveList = new ArrayList<>();
+    private LinkedList<String> searchMoves(JSONObject pokeJsonObject) {
+        LinkedList<String> moveList = new LinkedList<>();
         JSONArray movesJArray = pokeJsonObject.getJSONArray("moves");
 
         for (int i = 0; i < movesJArray.length(); i++) {
@@ -68,8 +70,8 @@ public class PokemonService {
         return moveList;
     }
 
-    private ArrayList<Ability> searchAbilities(JSONObject pokeJsonObject) {
-        ArrayList<Ability> pokemonAbilities = new ArrayList<>();
+    private LinkedList<Ability> searchAbilities(JSONObject pokeJsonObject) {
+        LinkedList<Ability> pokemonAbilities = new LinkedList<>();
         JSONArray abilitiesArray = pokeJsonObject.getJSONArray(ABILITIES_KEY);
         String abilityName = null;
         String abilityURL = null;
@@ -98,8 +100,8 @@ public class PokemonService {
         return (int) pokeJsonObject.get(WEIGHT_KEY);
     }
 
-    private ArrayList<String> searchTypes(JSONObject pokeJsonObject) {
-        ArrayList<String> types = new ArrayList<>();
+    private LinkedList<String> searchTypes(JSONObject pokeJsonObject) {
+        LinkedList<String> types = new LinkedList<>();
         JSONArray typesArray = pokeJsonObject.getJSONArray(TYPES_KEY);
         for (int i = 0; i < typesArray.length(); i++) {
             JSONObject typeObject = typesArray.getJSONObject(i);
@@ -125,6 +127,7 @@ public class PokemonService {
         StringBuilder informationString = null;
         Scanner input = null;
 
+        //URL url = new URL(urlParam);
         URL url = this.checkURLResponse(urlParam);
 
         if (url != null) {
@@ -158,8 +161,8 @@ public class PokemonService {
         return url;
     }
 
-    private ArrayList<String> jsonArrayToArrayList(JSONArray jsonArray, String clave) {
-        ArrayList<String> listaURLs = new ArrayList<>();
+    private LinkedList<String> jsonArrayToArrayList(JSONArray jsonArray, String clave) {
+        LinkedList<String> listaURLs = new LinkedList<>();
         JSONObject jsonObject = null;
 
         for (int i = 0; i < jsonArray.length(); i++) {

@@ -4,12 +4,11 @@ import com.challenge.Apirest.Models.Pokemon;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.ArrayList;
+import java.util.LinkedList;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class PokemonRepository {
-    private ArrayList<Pokemon> pokemonsList;
+    private LinkedList<Pokemon> pokemonsList;
 }
