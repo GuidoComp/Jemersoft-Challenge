@@ -2,23 +2,21 @@ package com.challenge.Apirest.Services;
 
 import com.challenge.Apirest.Models.Ability;
 import com.challenge.Apirest.Models.Pokemon;
-import com.challenge.Apirest.Repositories.PokemonRepository;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.Scanner;
 
 @Service
 public class PokemonService {
     private static final String URLPOKE_API = "https://pokeapi.co/api/v2/pokemon/";
-    private static final int HTTPSTATUS_OK = 200;
     private static final String POKEMON_JSONOBJECT_KEY = "url"; //clave de url de cada pokemon
+    private static final String URL_PARAMS = "?limit=1000000&offset=0";
+    private static final String ALL_POKEMONS = "https://pokeapi.co/api/v2/pokemon?limit=100000&offset=0";
     private static final String POKEMONS_JSONARRAY_KEY = "results"; //clave de jsonarray de pokemones
     private static final String PHOTO_OBJECT_KEY = "sprites";
     private static final String PHOTO_KEY = "front_default";
@@ -28,46 +26,100 @@ public class PokemonService {
     private static final String WEIGHT_KEY = "weight";
     private static final String ABILITIES_KEY = "abilities";
     private static final String ABILITY_KEY = "ability";
+    private final RestTemplate restTemplate;
 
-    public LinkedList<Pokemon> generatePokemons() throws IOException {
+    public PokemonService(RestTemplateBuilder restTemplateBuilder) {
+        this.restTemplate = restTemplateBuilder.build();
+    }
+
+    //Método más general, que abarca los métodos necesarios para devolver la lista de Pokemones con la información solicitada.
+    public LinkedList<Pokemon> getBasicInfoAllPokemons() throws IOException {
         LinkedList<Pokemon> lista = new LinkedList<>();
-        LinkedList<String> pokemonsUrlsList = this.jsonArrayToArrayList(this.convertURLToJsonArray(URLPOKE_API, POKEMONS_JSONARRAY_KEY), POKEMON_JSONOBJECT_KEY);
+        LinkedList<String> pokemonsUrlsList = this.readApi();
 
-        for (String pokemonUrl: pokemonsUrlsList) {
-            JSONObject pokeJsonObject = this.convertURLToJsonObject(pokemonUrl);
-            lista.add(this.generatePokemon(pokeJsonObject));
+        for (int i = 0; i < pokemonsUrlsList.size(); i++) {
+            lista.add(this.getBasicInfo(pokemonsUrlsList.get(i)));
         }
         return lista;
     }
 
-    private Pokemon generatePokemon(JSONObject pokeJsonObject) throws IOException {
+    /*public Pokemon getBasicInfoAllPokemons2() throws IOException {
+        LinkedList<Pokemon> lista = new LinkedList<>();
+        //LinkedList<String> pokemonsUrlsList = this.readApi();
+        String url = "https://pokeapi.co/api/v2/pokemon/1";
+        Pokemon pokemon = restTemplate.getForObject(url, Pokemon.class);
+        //log.info("Result " + pokemon);
+
+
+
+        return pokemon;
+    }*/
+
+    //Convierte la URL oficial a una colección que contiene la URL (en formato String) de cada pokemon
+    private LinkedList<String> readApi() {
+        LinkedList<String> orderedURLs = null;
+
+        String unorderedPokemonsUrls = restTemplate.getForObject(URLPOKE_API, String.class);
+        JSONObject jsonObject = new JSONObject(unorderedPokemonsUrls);
+        JSONArray jsonArray = jsonObject.getJSONArray(POKEMONS_JSONARRAY_KEY);
+        orderedURLs = this.jsonArrayToLinkedList(jsonArray, POKEMON_JSONOBJECT_KEY);
+
+        return orderedURLs;
+    }
+
+    //Obtiene información requerida a partir de una URL de un pokemon. Devuelve un objeto Pokemon con tal información.
+    private Pokemon getBasicInfo(String urlPoke) throws IOException {
         Pokemon pokemon = new Pokemon();
+        String stringJsonObject = null;
+
+        stringJsonObject = restTemplate.getForObject(urlPoke, String.class);
+        JSONObject pokeJsonObject = new JSONObject(stringJsonObject);
 
         pokemon.setPhoto(this.searchPhotoUrl(pokeJsonObject));
         pokemon.setTypes(this.searchTypes(pokeJsonObject));
         pokemon.setWeight(this.searchWeigth(pokeJsonObject));
         pokemon.setAbilities(this.searchAbilities(pokeJsonObject));
+
+        return pokemon;
+    }
+
+    //Método usado en la 2da llamada (get request "/{id}"). Reutiliza el método que devuelve la información básica, pero para un solo Pokemon.
+    //Le agrega nueva información requerida (descripción y lista de movimientos).
+    public Pokemon getAllDetails(String id) throws IOException {
+        Pokemon pokemon = null;
+        String jsonObjectString = null;
+        pokemon = this.getBasicInfo(URLPOKE_API + id);
+
+        jsonObjectString = restTemplate.getForObject(URLPOKE_API + id, String.class);
+        JSONObject pokeJsonObject = new JSONObject(jsonObjectString);
+
         pokemon.setDescription(this.searchName(pokeJsonObject));
         pokemon.setMoves(this.searchMoves(pokeJsonObject));
 
         return pokemon;
     }
 
-    private String searchName(JSONObject pokeJsonObject) {
-        return pokeJsonObject.get("name").toString();
+
+    private String searchPhotoUrl(JSONObject pokeJsonObject) throws IOException {
+        JSONObject fotosJObject = (JSONObject) pokeJsonObject.get(PHOTO_OBJECT_KEY);
+        String urlPhoto = fotosJObject.get(PHOTO_KEY).toString();
+        return urlPhoto;
     }
 
-    private LinkedList<String> searchMoves(JSONObject pokeJsonObject) {
-        LinkedList<String> moveList = new LinkedList<>();
-        JSONArray movesJArray = pokeJsonObject.getJSONArray("moves");
-
-        for (int i = 0; i < movesJArray.length(); i++) {
-            JSONObject moveObject = movesJArray.getJSONObject(i);
-            JSONObject moveMoveObject = moveObject.getJSONObject("move");
-            String moveName = moveMoveObject.get("name").toString();
-            moveList.add(moveName);
+    private LinkedList<String> searchTypes(JSONObject pokeJsonObject) {
+        LinkedList<String> types = new LinkedList<>();
+        JSONArray typesArray = pokeJsonObject.getJSONArray(TYPES_KEY);
+        for (int i = 0; i < typesArray.length(); i++) {
+            JSONObject typeObject = typesArray.getJSONObject(i);
+            JSONObject type = (JSONObject) typeObject.get(TYPE_KEY);
+            String nameType = type.get(TYPENAME_KEY).toString();
+            types.add(nameType);
         }
-        return moveList;
+        return types;
+    }
+
+    private int searchWeigth(JSONObject pokeJsonObject) {
+        return (int) pokeJsonObject.get(WEIGHT_KEY);
     }
 
     private LinkedList<Ability> searchAbilities(JSONObject pokeJsonObject) {
@@ -96,53 +148,24 @@ public class PokemonService {
         return pokemonAbilities;
     }
 
-    private int searchWeigth(JSONObject pokeJsonObject) {
-        return (int) pokeJsonObject.get(WEIGHT_KEY);
+    private String searchName(JSONObject pokeJsonObject) {
+        return pokeJsonObject.get("name").toString();
     }
 
-    private LinkedList<String> searchTypes(JSONObject pokeJsonObject) {
-        LinkedList<String> types = new LinkedList<>();
-        JSONArray typesArray = pokeJsonObject.getJSONArray(TYPES_KEY);
-        for (int i = 0; i < typesArray.length(); i++) {
-            JSONObject typeObject = typesArray.getJSONObject(i);
-            JSONObject type = (JSONObject) typeObject.get(TYPE_KEY);
-            String nameType = type.get(TYPENAME_KEY).toString();
-            types.add(nameType);
+    private LinkedList<String> searchMoves(JSONObject pokeJsonObject) {
+        LinkedList<String> moveList = new LinkedList<>();
+        JSONArray movesJArray = pokeJsonObject.getJSONArray("moves");
+
+        for (int i = 0; i < movesJArray.length(); i++) {
+            JSONObject moveObject = movesJArray.getJSONObject(i);
+            JSONObject moveMoveObject = moveObject.getJSONObject("move");
+            String moveName = moveMoveObject.get("name").toString();
+            moveList.add(moveName);
         }
-        return types;
+        return moveList;
     }
 
-    private String searchPhotoUrl(JSONObject pokeJsonObject) throws IOException {
-        JSONObject fotosJObject = (JSONObject) pokeJsonObject.get(PHOTO_OBJECT_KEY);
-        String urlPhoto = fotosJObject.get(PHOTO_KEY).toString();
-        return urlPhoto;
-    }
-
-    private JSONArray convertURLToJsonArray(String urlParam, String jsonArrayKey) throws IOException {
-        return this.convertURLToJsonObject(urlParam).getJSONArray(jsonArrayKey);
-    }
-
-    private JSONObject convertURLToJsonObject (String urlParam) throws IOException {
-        JSONObject jsonObject = null;
-        StringBuilder informationString = null;
-        Scanner input = null;
-
-        //URL url = new URL(urlParam);
-        URL url = this.checkURLResponse(urlParam);
-
-        if (url != null) {
-            informationString = new StringBuilder();
-            input = new Scanner(url.openStream());
-            while (input.hasNext()) {
-                informationString.append(input.nextLine());
-            }
-            input.close();
-            jsonObject = new JSONObject(informationString.toString());
-        }
-        return jsonObject;
-    }
-
-    private URL checkURLResponse(String urlParam) {
+    /*private URL checkURLResponse(String urlParam) {
         URL url = null;
         int responseCode = 0;
         try {
@@ -159,9 +182,11 @@ public class PokemonService {
             e.printStackTrace();
         }
         return url;
-    }
-
-    private LinkedList<String> jsonArrayToArrayList(JSONArray jsonArray, String clave) {
+    }*/
+    //Método usado para leer la API externa (readApi()). Genera la lista ordenada de URLs de cada pokemon,
+    //iterando los elementos de un jsonArray.
+    //Se usa para ordenar la lista oficial de Pokemones.
+    private LinkedList<String> jsonArrayToLinkedList(JSONArray jsonArray, String clave) {
         LinkedList<String> listaURLs = new LinkedList<>();
         JSONObject jsonObject = null;
 
