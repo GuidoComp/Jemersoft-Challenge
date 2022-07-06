@@ -2,23 +2,31 @@ package com.challenge.Apirest.Services;
 
 import com.challenge.Apirest.Models.Ability;
 import com.challenge.Apirest.Models.Pokemon;
-import com.challenge.Apirest.Repositories.PokemonRepository;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @Service
 public class PokemonService {
     private static final String URLPOKE_API = "https://pokeapi.co/api/v2/pokemon/";
     private static final int HTTPSTATUS_OK = 200;
     private static final String POKEMON_JSONOBJECT_KEY = "url"; //clave de url de cada pokemon
+    private static final String URL_PARAMS = "?limit=1000000&offset=0";
     private static final String POKEMONS_JSONARRAY_KEY = "results"; //clave de jsonarray de pokemones
     private static final String PHOTO_OBJECT_KEY = "sprites";
     private static final String PHOTO_KEY = "front_default";
@@ -29,16 +37,64 @@ public class PokemonService {
     private static final String ABILITIES_KEY = "abilities";
     private static final String ABILITY_KEY = "ability";
 
-    public LinkedList<Pokemon> generatePokemons() throws IOException {
+    private final RestTemplate restTemplate;
+
+    public PokemonService(RestTemplateBuilder restTemplateBuilder) {
+        this.restTemplate = restTemplateBuilder.build();
+    }
+
+    public Pokemon getPokemonById(String id) throws IOException {
+        Pokemon pokemon = null;
+        String d = null;
+
+        d = this.restTemplate.getForObject(URLPOKE_API+id, String.class);
+        JSONObject jsonObject = new JSONObject(d);
+
+        return this.generatePokemon(jsonObject);
+    }
+
+    public LinkedList<Pokemon> getPokemons() throws IOException, ExecutionException, InterruptedException {
         LinkedList<Pokemon> lista = new LinkedList<>();
-        LinkedList<String> pokemonsUrlsList = this.jsonArrayToArrayList(this.convertURLToJsonArray(URLPOKE_API, POKEMONS_JSONARRAY_KEY), POKEMON_JSONOBJECT_KEY);
+        LinkedList<String> pokemonsUrlsList = this.jsonArrayToArrayList(this.convertURLToJsonArray(URLPOKE_API+URL_PARAMS, POKEMONS_JSONARRAY_KEY), POKEMON_JSONOBJECT_KEY);
+
+        List<CompletableFuture<String>> allFutures = new ArrayList<>();
+        //d = this.restTemplate.getForObject(URLPOKE_API+id, String.class);
 
         for (String pokemonUrl: pokemonsUrlsList) {
-            JSONObject pokeJsonObject = this.convertURLToJsonObject(pokemonUrl);
-            lista.add(this.generatePokemon(pokeJsonObject));
+            String string = this.restTemplate.getForObject(pokemonUrl, String.class);
+            //JSONObject pokeJsonObject = this.convertURLToJsonObject(pokemonUrl);
+            //lista.add(this.generatePokemon(pokeJsonObject));
+
+            allFutures.add(CompletableFuture.completedFuture(string));
         }
+        CompletableFuture.allOf(allFutures.toArray(new CompletableFuture[0])).join();
+
+        for (CompletableFuture<String> future: allFutures) {
+            JSONObject jsonObject = new JSONObject(future.get());
+            System.out.println(jsonObject);
+            lista.add(this.generatePokemon(jsonObject));
+        }
+
         return lista;
     }
+
+    /*@Override
+    public void run(String... args) throws Exception {
+        List<CompletableFuture<JSONObject>> prom = new ArrayList<>();
+
+        for (int i = 0; i < 10; i++) {
+            allFutures.add(slowServiceCaller.callOtherService());
+        }
+
+        CompletableFuture.allOf(allFutures.toArray(new CompletableFuture[0])).join();
+
+        for (int i = 0; i < 10; i++) {
+            System.out.println("response: " + allFutures.get(i).get().toString());
+        }
+
+        System.out.println("Total time: " + Duration.between(start, Instant.now()).getSeconds());
+
+    }*/
 
     private Pokemon generatePokemon(JSONObject pokeJsonObject) throws IOException {
         Pokemon pokemon = new Pokemon();
@@ -127,8 +183,8 @@ public class PokemonService {
         StringBuilder informationString = null;
         Scanner input = null;
 
-        //URL url = new URL(urlParam);
-        URL url = this.checkURLResponse(urlParam);
+        URL url = new URL(urlParam);
+        //URL url = this.checkURLResponse(urlParam);
 
         if (url != null) {
             informationString = new StringBuilder();

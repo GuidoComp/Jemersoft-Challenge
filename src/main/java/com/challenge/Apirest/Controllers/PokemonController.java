@@ -11,25 +11,28 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.util.LinkedList;
+import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping("pokemons")
 public class PokemonController {
     private final PokemonService pokemonService;
-    private PokemonRepository pokemonRepository;
+    //private PokemonRepository pokemonRepository;
     @Autowired
     public PokemonController(PokemonService pokemonService) {
         this.pokemonService = pokemonService;
     }
     @GetMapping
-    private LinkedList<Pokemon> pokemonsList() throws IOException {
-        LinkedList<Pokemon> list = pokemonService.generatePokemons();
-        pokemonRepository = new PokemonRepository(list);
+    private LinkedList<Pokemon> pokemonsList() throws IOException, ExecutionException, InterruptedException {
+        LinkedList<Pokemon> list = pokemonService.getPokemons();
+        //pokemonRepository = new PokemonRepository(list);
         return list;
     }
 
     @GetMapping("/{id}")
-    private Pokemon getMoreDetails(@PathVariable int id){
-        return this.pokemonRepository.getPokemonsList().get(id-1);
+    private Pokemon getMoreDetails(@PathVariable String id) throws IOException {
+        return pokemonService.getPokemonById(id);
     }
+
+
 }
