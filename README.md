@@ -25,6 +25,8 @@ API Rest que brinda cierta información básica y especificada de los Pokemons. 
 - Herramienta de gestión de proyectos: Maven
 - Packaging: Jar
 - Endpoints: "/pokemons", "pokemons/{id}"
+- El endpoint "/pokemons/{id}" para solicitar información de un solo pokemon acepta valores alfanuméricos (tanto enteros como strings). Sea cual fuere el valor ingresado, la API responderá si lo encuentra o no.
+- El primer endpoint "/pokemons" trabaja sobre la URL oficial de pokemon "https://pokeapi.co/api/v2/pokemon/" que tiene un límite de 20 pokemones. Pero para las consultas por un pokemon en particular ("pokemons/{id}") no tiene límite.
 
 
 [1]: https://pokeapi.co/api/v2/pokemon "pokeapi.co"

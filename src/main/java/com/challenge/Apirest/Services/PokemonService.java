@@ -1,5 +1,6 @@
 package com.challenge.Apirest.Services;
 
+import com.challenge.Apirest.Exceptions.PokemonOutOfRange;
 import com.challenge.Apirest.Models.Ability;
 import com.challenge.Apirest.Models.Pokemon;
 import org.json.JSONArray;
@@ -15,8 +16,6 @@ import java.util.LinkedList;
 public class PokemonService {
     private static final String URLPOKE_API = "https://pokeapi.co/api/v2/pokemon/";
     private static final String POKEMON_JSONOBJECT_KEY = "url"; //clave de url de cada pokemon
-    private static final String URL_PARAMS = "?limit=1000000&offset=0";
-    private static final String ALL_POKEMONS = "https://pokeapi.co/api/v2/pokemon?limit=100000&offset=0";
     private static final String POKEMONS_JSONARRAY_KEY = "results"; //clave de jsonarray de pokemones
     private static final String PHOTO_OBJECT_KEY = "sprites";
     private static final String PHOTO_KEY = "front_default";
@@ -43,19 +42,7 @@ public class PokemonService {
         return lista;
     }
 
-    /*public Pokemon getBasicInfoAllPokemons2() throws IOException {
-        LinkedList<Pokemon> lista = new LinkedList<>();
-        //LinkedList<String> pokemonsUrlsList = this.readApi();
-        String url = "https://pokeapi.co/api/v2/pokemon/1";
-        Pokemon pokemon = restTemplate.getForObject(url, Pokemon.class);
-        //log.info("Result " + pokemon);
-
-
-
-        return pokemon;
-    }*/
-
-    //Convierte la URL oficial a una colección que contiene la URL (en formato String) de cada pokemon
+    //Método que convierte la URL oficial a una colección que contiene la URL (en formato String) de cada pokemon
     private LinkedList<String> readApi() {
         LinkedList<String> orderedURLs = null;
 
@@ -67,7 +54,21 @@ public class PokemonService {
         return orderedURLs;
     }
 
-    //Obtiene información requerida a partir de una URL de un pokemon. Devuelve un objeto Pokemon con tal información.
+    /*Método usado para leer la API externa (readApi()). Genera la lista ordenada de URLs de cada pokemon,
+    iterando los elementos de un jsonArray.
+    Se usa para ordenar la lista oficial de Pokemones.*/
+    private LinkedList<String> jsonArrayToLinkedList(JSONArray jsonArray, String clave) {
+        LinkedList<String> listaURLs = new LinkedList<>();
+        JSONObject jsonObject = null;
+
+        for (int i = 0; i < jsonArray.length(); i++) {
+            jsonObject = jsonArray.getJSONObject(i);
+            listaURLs.add(jsonObject.getString(clave));
+        }
+        return listaURLs;
+    }
+
+    //Método que obtiene información requerida a partir de una URL de un pokemon. Devuelve un objeto Pokemon con tal información.
     private Pokemon getBasicInfo(String urlPoke) throws IOException {
         Pokemon pokemon = new Pokemon();
         String stringJsonObject = null;
@@ -83,23 +84,28 @@ public class PokemonService {
         return pokemon;
     }
 
-    //Método usado en la 2da llamada (get request "/{id}"). Reutiliza el método que devuelve la información básica, pero para un solo Pokemon.
-    //Le agrega nueva información requerida (descripción y lista de movimientos).
-    public Pokemon getAllDetails(String id) throws IOException {
+    /*Método usado en la 2da llamada (get request "/{id}"). Reutiliza el método que devuelve la información básica, pero para un solo Pokemon.
+    Le agrega nueva información requerida (descripción y lista de movimientos).*/
+    public Pokemon getAllDetails(String id) throws IOException, PokemonOutOfRange {
         Pokemon pokemon = null;
         String jsonObjectString = null;
-        pokemon = this.getBasicInfo(URLPOKE_API + id);
 
-        jsonObjectString = restTemplate.getForObject(URLPOKE_API + id, String.class);
-        JSONObject pokeJsonObject = new JSONObject(jsonObjectString);
+        try {
+            pokemon = this.getBasicInfo(URLPOKE_API + id);
 
-        pokemon.setDescription(this.searchName(pokeJsonObject));
-        pokemon.setMoves(this.searchMoves(pokeJsonObject));
+            jsonObjectString = restTemplate.getForObject(URLPOKE_API + id, String.class);
+            JSONObject pokeJsonObject = new JSONObject(jsonObjectString);
 
+            pokemon.setDescription(this.searchName(pokeJsonObject));
+            pokemon.setMoves(this.searchMoves(pokeJsonObject));
+        } catch (Exception e) {
+            throw new PokemonOutOfRange("Pokemon inexistente");
+        }
         return pokemon;
     }
 
-
+    /*
+    * Los siguientes métodos buscan la información solicitada dentro del JSONObject de un solo pokemon*/
     private String searchPhotoUrl(JSONObject pokeJsonObject) throws IOException {
         JSONObject fotosJObject = (JSONObject) pokeJsonObject.get(PHOTO_OBJECT_KEY);
         String urlPhoto = fotosJObject.get(PHOTO_KEY).toString();
@@ -165,35 +171,5 @@ public class PokemonService {
         return moveList;
     }
 
-    /*private URL checkURLResponse(String urlParam) {
-        URL url = null;
-        int responseCode = 0;
-        try {
-            url = new URL(urlParam);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.connect();
-            responseCode = conn.getResponseCode();
-            if (responseCode != HTTPSTATUS_OK) {
-                url = null;
-                throw new RuntimeException("Error " + responseCode);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return url;
-    }*/
-    //Método usado para leer la API externa (readApi()). Genera la lista ordenada de URLs de cada pokemon,
-    //iterando los elementos de un jsonArray.
-    //Se usa para ordenar la lista oficial de Pokemones.
-    private LinkedList<String> jsonArrayToLinkedList(JSONArray jsonArray, String clave) {
-        LinkedList<String> listaURLs = new LinkedList<>();
-        JSONObject jsonObject = null;
 
-        for (int i = 0; i < jsonArray.length(); i++) {
-            jsonObject = jsonArray.getJSONObject(i);
-            listaURLs.add(jsonObject.getString(clave));
-        }
-        return listaURLs;
-    }
 }
